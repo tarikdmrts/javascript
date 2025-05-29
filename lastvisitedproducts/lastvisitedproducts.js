@@ -16,7 +16,8 @@
         prevArrow: 'prev-arrow-element',
         contentWrapper: 'last-visited-products',
         sliderArrowInactive: 'slider-arrow-inactive',
-        addToCartBtn:'custom-add-to-cart-btn',
+        addToCartBtn: 'custom-add-to-cart-btn',
+        sizeDropdown: 'custom-size-dropdown',
     };
 
     const selectors = Object.keys(classes).reduce((createdSelector, key) => (
@@ -40,7 +41,7 @@
 
     self.buildCSS = () => {
         const { wrapper, container, image, name, list, content, title, productUrl,
-            productPrice, nextArrow, prevArrow, contentWrapper, sliderArrowInactive, addToCartBtn } = selectors;
+            productPrice, nextArrow, prevArrow, contentWrapper, sliderArrowInactive, addToCartBtn, sizeDropdown } = selectors;
 
         const customStyle = `
         ${wrapper} {
@@ -123,11 +124,28 @@
             font-size: 14px;
             font-weight: bold;
             cursor: pointer;
-            margin-top:10px;
+            margin-top:5px;
             padding:6px;
         } 
+        ${addToCartBtn}.disabled {
+            background: #ccc;
+            color: #666;
+            cursor: not-allowed;
+            opacity: 0.6;
+        }
         ${addToCartBtn}:hover{
             background-color: #1452a0;
+        }
+        ${sizeDropdown}{
+            background: #193db0;
+            color: #fff;
+            border-radius: 5px;
+            border: none;
+            font-size: 12px;
+            font-weight: bold;
+            cursor: pointer;
+            margin-top:5px;
+            text-align:center;
         }
         @media screen and (min-width:1650px){
             ${prevArrow} {
@@ -174,8 +192,11 @@
                             <div class="${classes.name}">${product.name}</div>
                             <span class="custom-product-price">${product.productPrice}</span>
                         </a>
-                        <div class="add-to-cart-container">
-                            <button data-id="${product.selectedProductId} "class="${classes.addToCartBtn}">Sepete Ekle</button>
+                        <div class="custom-add-to-cart-container">
+                            <select class="${classes.sizeDropdown}" data-product-id ="${product.id}">
+                                <option value="">Beden Seçin</option>
+                             </select>
+                            <button class="${classes.addToCartBtn} disabled" data-product-id ="${product.id}">Sepete Ekle</button>
                         </div>
                     </div>
                 </li>
@@ -189,7 +210,6 @@
                             <ul class="${classes.list}">
                                 ${productsHTML}
                             </ul>
-
                         </div>
                         <a href ="#" class="${classes.prevArrow}">&#8249;</a>
                         <a href ="#" class="${classes.nextArrow}">&#8250;</a>
@@ -211,7 +231,7 @@
                     name: $('.breadcrumb-item:last').text(),
                     imgUrl: $('.product-large-image:first').attr('src'),
                     productUrl: window.location.href,
-                    selectedProductId: window.products.filter((product) => product.SizeText === "M")[0].ProductId,
+                    allProductInfos: window.products,
                     productPrice: $('.current-price').text().trim() || $('.price-in-cart').text().trim(),
                     timeStamp: Date.now(),
                 };
@@ -256,10 +276,37 @@
                 self.setArrowInactive(prevArrow, nextArrow, currentOffset, maxOffset);
             });
 
-            $('.custom-add-to-cart-btn').on('click',function () {
-                const selectedProductId = $(this).data('id');
-                self.addToCartProduct(selectedProductId);
-            });            
+            $('.custom-add-to-cart-btn').on('click', function (e) {
+                e.preventDefault();
+                const selectedProductId = $(this).data('selected-product-id');
+                if (!$(this).hasClass('disabled')) {
+                    self.addToCartProduct(selectedProductId);
+                }
+            });
+
+            visitedProducts.forEach(product => {
+                const productId = product.id;
+                const dropdown = $(`.custom-size-dropdown[data-product-id="${productId}"]`);
+                const button = $(`.custom-add-to-cart-btn[data-product-id="${productId}"]`);
+
+                const sortedSizes = product.allProductInfos.sort((a, b) => b.SizeDisplayOrder - a.SizeDisplayOrder);
+                sortedSizes.map(item => {
+                    const option = $('<option></option>');
+                    option.val(item.ProductId);
+                    option.text(item.SizeText);
+                    dropdown.append(option);
+                });
+                dropdown.on('change', function () {
+                    if ($(this).val() === "") {
+                        button.addClass('disabled');
+                    } else {
+                        button.removeClass('disabled');
+                        const selectedProductId = $(this).val();
+                        const container = $(this).closest('.custom-add-to-cart-container');
+                        container.find('.custom-add-to-cart-btn').data('selected-product-id', selectedProductId);
+                    }
+                });
+            });
         }
     };
 
@@ -280,4 +327,5 @@
             nextArrow.removeClass(classes.sliderArrowInactive);
         }
     }
+    self.init();
 })({});
